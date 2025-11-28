@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class TripEvent {
   final String id;
   final String title;
@@ -27,6 +25,8 @@ class TripEvent {
       imageUrl: data['cover_image_url'] as String?, 
     );
   }
+
+  Map<String, dynamic> toMap() {
     return {
       'title': title,
       'destination': destination,

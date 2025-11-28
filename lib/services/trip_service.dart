@@ -1,39 +1,49 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ppb_journey_app/models/trip_event.dart';
 import 'package:ppb_journey_app/services/auth_service.dart';
 
 class TripService {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final AuthService _authService = AuthService(); 
+  final AuthService _authService = AuthService();
+
+  Future<String?> _uploadImage(File imageFile, String userId) async {
+    try {
+      final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final path = 'events/$fileName';
+      await _supabase.storage.from('trip_images').upload(path, imageFile);
+      final imageUrl = _supabase.storage.from('trip_images').getPublicUrl(path);
+      return imageUrl;
+    } catch (e) {
+      throw Exception('Gagal upload gambar: $e');
+    }
+  }
 
   Future<void> createNewTrip({
     required String title,
     required String destination,
     required DateTime startDate,
-    String? imageUrl,
+    File? imageFile,
   }) async {
-    final user = _authService.getCurrentUser();
-    if (user == null) {
-      throw Exception("UNAUTHENTICATED_ERROR: Pengguna belum login.");
+    final user = _authService.currentUser;
+    if (user == null) throw Exception("Unauthorized");
+
+    String? publicImageUrl;
+
+    if (imageFile != null) {
+      publicImageUrl = await _uploadImage(imageFile, user.id);
     }
 
-    try {
-      final newTrip = TripEvent(
-        id: '', 
-        title: title,
-        destination: destination,
-        startDate: startDate,
-        ownerId: user.id, 
-        imageUrl: imageUrl, 
-      );
+    final newTrip = TripEvent(
+      id: '', 
+      title: title,
+      destination: destination,
+      startDate: startDate,
+      ownerId: user.id, 
+      imageUrl: publicImageUrl,
+    );
 
-      await _supabase.from('trips').insert(newTrip.toMap());
-
-    } on PostgrestException catch (e) {
-      throw Exception('Gagal membuat Trip: ${e.message}');
-    } catch (e) {
-      throw Exception('Terjadi kesalahan tak terduga: $e');
-    }
+    await _supabase.from('trips').insert(newTrip.toMap());
   }
 
   Future<List<TripEvent>> getMyTrips() async {
@@ -49,7 +59,11 @@ class TripService {
 
       return trips;
     } catch (e) {
-      throw Exception('Error saat mengambil trip: $e');
+      return [];
     }
+  }
+  
+  Future<void> deleteTrip(String tripId) async {
+    await _supabase.from('trips').delete().eq('id', tripId);
   }
 }

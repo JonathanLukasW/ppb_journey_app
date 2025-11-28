@@ -1,4 +1,7 @@
+import 'dart:io'; 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; 
+import 'package:ppb_journey_app/services/trip_service.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -9,9 +12,25 @@ class CreateEventScreen extends StatefulWidget {
 
 class _CreateEventScreenState extends State<CreateEventScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _destinationController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _destinationController = TextEditingController();
+  
+  File? _selectedImage;
+  
+  final TripService _tripService = TripService();
   DateTime? _selectedDate;
+  bool _isLoading = false;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -27,14 +46,35 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     }
   }
 
-  void _createEvent() {
+  Future<void> _createEvent() async {
     if (_formKey.currentState!.validate() && _selectedDate != null) {
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Event berhasil dibuat! (Simulasi)')),
-      );
+      setState(() => _isLoading = true);
 
-      Navigator.pop(context);
+      try {
+        await _tripService.createNewTrip(
+          title: _titleController.text,
+          destination: _destinationController.text,
+          startDate: _selectedDate!,
+          imageFile: _selectedImage, 
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Berhasil! Event tersimpan.')),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+
     } else if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mohon pilih tanggal event perjalanan.')),
@@ -46,7 +86,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buat Event Trip Baru', style: TextStyle(color: Colors.black)),
+        title: const Text('Buat Event Trip', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -58,6 +98,36 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.grey.shade400),
+                    image: _selectedImage != null 
+                      ? DecorationImage(
+                          image: FileImage(_selectedImage!), 
+                          fit: BoxFit.cover
+                        )
+                      : null
+                  ),
+                  child: _selectedImage == null 
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text("Tap untuk upload cover", style: TextStyle(color: Colors.grey)),
+                        ],
+                      )
+                    : null, 
+                ),
+              ),
+              const SizedBox(height: 20),
+
               _buildInputField(
                 controller: _titleController,
                 label: 'Judul Event Trip',
@@ -109,17 +179,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _createEvent,
+                  onPressed: _isLoading ? null : _createEvent,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text(
-                    'Buat Event Trip',
-                    style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isLoading 
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Simpan Event',
+                        style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                 ),
               ),
             ],
@@ -138,29 +210,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: Colors.teal),
             hintText: hint,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
             fillColor: Colors.grey[100],
             filled: true,
           ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Kolom $label tidak boleh kosong.';
-            }
-            return null;
-          },
+          validator: (value) => (value == null || value.isEmpty) ? 'Wajib diisi' : null,
         ),
       ],
     );

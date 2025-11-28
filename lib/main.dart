@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ppb_journey_app/screens/auth/login_screen.dart';
 import 'package:ppb_journey_app/screens/events/event_list_screen.dart';
-// import 'package:provider/provider.dart'; 
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
@@ -15,16 +14,7 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  runApp(const MyApp()); 
-  
-  // runApp(
-  //   MultiProvider(
-  //     providers: [
-  //       ChangeNotifierProvider(create: (context) => SomeProvider()),
-  //     ],
-  //     child: const MyApp(),
-  //   ),
-  // );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -33,14 +23,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aplikasi Pendukung Event Trip',
+      title: 'Travel App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        scaffoldBackgroundColor: Colors.white,
+        fontFamily: 'Poppins',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6E78F7),
+          primary: const Color(0xFF6E78F7),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF9F9F9),
         useMaterial3: true,
       ),
-      home: const AuthGuard(), 
+      home: const AuthGuard(),
     );
   }
 }
@@ -54,17 +48,82 @@ class AuthGuard extends StatelessWidget {
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator(color: Colors.teal)),
-            );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-
-        if (snapshot.hasData && snapshot.data!.session != null) {
-          return const EventListScreen();
+        
+        final session = snapshot.data?.session;
+        if (session != null) {
+          return const MainScreen(); 
         }
-
         return const LoginScreen();
       },
+    );
+  }
+}
+
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _selectedIndex = 0;
+  final List<Widget> _screens = [
+    const EventListScreen(),
+    const Center(child: Text("Halaman Chat")), 
+    const Center(child: Text("Halaman Friends")), 
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+
+      body: _screens[_selectedIndex],
+      
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black,
+              blurRadius: 20,
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color(0xFF6E78F7),
+          unselectedItemColor: Colors.grey.shade400,
+          showUnselectedLabels: true,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_rounded),
+              label: 'Events',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline_rounded),
+              label: 'Chat',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline_rounded),
+              label: 'Friends',
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
