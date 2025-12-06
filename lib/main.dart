@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:ppb_journey_app/screens/chats/chat_list_screen.dart';
 import 'package:ppb_journey_app/screens/friends/friends_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ppb_journey_app/screens/auth/login_screen.dart';
@@ -75,7 +76,7 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final List<Widget> _screens = [
     const EventListScreen(),
-    const Center(child: Text("Halaman Chat")),
+    const ChatListScreen(),
     const FriendsScreen(),
   ];
 

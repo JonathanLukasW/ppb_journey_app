@@ -7,7 +7,11 @@ class ChatScreen extends StatefulWidget {
   final String friendId;
   final String friendName; // Untuk judul AppBar
 
-  const ChatScreen({super.key, required this.friendId, required this.friendName});
+  const ChatScreen({
+    super.key,
+    required this.friendId,
+    required this.friendName,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -28,14 +32,23 @@ class _ChatScreenState extends State<ChatScreen> {
         receiverId: widget.friendId,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal kirim: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal kirim: $e")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.friendName)),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(
+          widget.friendName,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        
+      ),
       body: Column(
         children: [
           // --- BAGIAN 1: LIST PESAN ---
@@ -46,9 +59,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
+
                 final messages = snapshot.data ?? [];
-                
+
                 if (messages.isEmpty) {
                   return const Center(child: Text("Mulai percakapan!"));
                 }
@@ -79,8 +92,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: "Tulis pesan...",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                     ),
                   ),
                 ),
@@ -113,16 +131,19 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
         child: Column(
-          crossAxisAlignment: msg.isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: msg.isMine
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(msg.content, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 4),
             Text(
               "${msg.createdAt.hour}:${msg.createdAt.minute.toString().padLeft(2, '0')}",
-              style: TextStyle(fontSize: 10, color: Colors.white24)),
-            ])
-          ,
+              style: TextStyle(fontSize: 10, color: Colors.white24),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }

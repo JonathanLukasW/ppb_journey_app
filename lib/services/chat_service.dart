@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ppb_journey_app/models/messages.dart';
+import 'package:ppb_journey_app/models/conversation.dart';
 
 class ChatService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -32,5 +33,21 @@ class ChatService {
             (msg['sender_id'] == friendId && msg['receiver_id'] == myUserId)
           ).map((item) => Message.fromMap(item, myUserId)).toList();
         });
+  }
+
+  Future<List<Conversation>> getConversations() async {
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null) return [];
+
+    try {
+      final List<dynamic> response = await _supabase
+          .from('my_conversations')
+          .select() // Join ke tabel profile
+          .order('created_at', ascending: false); // Urutkan chat terbaru di atas
+
+      return response.map((e) => Conversation.fromMap(e, myId)).toList();
+    } catch (e) {
+      throw Exception('Gagal memuat chat: $e');
+    }
   }
 }

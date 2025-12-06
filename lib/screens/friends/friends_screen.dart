@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ppb_journey_app/models/friends.dart';
 import 'package:ppb_journey_app/screens/friends/add_friends_screen.dart';
-import 'package:ppb_journey_app/screens/friends/chat_screen.dart';
+import 'package:ppb_journey_app/screens/chats/chat_screen.dart';
 import 'package:ppb_journey_app/screens/friends/friends_inbox_screen.dart';
 import 'package:ppb_journey_app/services/friend_service.dart';
 
