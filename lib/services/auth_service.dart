@@ -6,35 +6,67 @@ class AuthService {
 
   User? get currentUser => _supabase.auth.currentUser;
 
-  Future<void> signOut() async {
-    await _supabase.auth.signOut();
-  }
-
-  Future<void> sendOtp(String email) async {
+  Future<void> signInWithPassword({
+    required String email, 
+    required String password
+  }) async {
     try {
-      await _supabase.auth.signInWithOtp(
+      await _supabase.auth.signInWithPassword(
         email: email,
-        shouldCreateUser: true, 
+        password: password,
       );
     } catch (e) {
-      throw Exception('Gagal mengirim OTP: $e');
+      throw Exception('Login gagal: Email atau password salah.');
     }
   }
 
-  Future<void> verifyOtp({required String email, required String token}) async {
+  Future<void> signUp({
+    required String email, 
+    required String password,
+    required String username,
+  }) async {
+    try {
+      await _supabase.auth.signUp(
+        email: email, 
+        password: password,
+      );
+    } catch (e) {
+      throw Exception('Gagal daftar: $e');
+    }
+  }
+
+  Future<void> verifySignUpOtp({required String email, required String token}) async {
     try {
       final response = await _supabase.auth.verifyOTP(
-        type: OtpType.email,
+        type: OtpType.signup, 
         token: token,
         email: email,
       );
       
-      if (response.session == null) {
-        throw Exception('Kode OTP salah atau kadaluarsa.');
+      if (response.session != null) {
+        await _createProfile(
+          response.user!.id, 
+          response.user!.userMetadata?['username']
+        );
       }
     } catch (e) {
-      throw Exception('Verifikasi Gagal: $e');
+      throw Exception('Kode OTP salah atau kadaluarsa.');
     }
+  }
+
+  Future<void> _createProfile(String userId, String? username) async {
+    try {
+      await _supabase.from('profiles').upsert({
+        'id': userId,
+        'username': username ?? 'User Baru',
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+    }
+  }
+
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
   }
 
   Future<Map<String, dynamic>?> getProfile() async {
@@ -69,12 +101,16 @@ class AuthService {
 
   Future<void> updateProfile({required String username, String? avatarUrl}) async {
     final userId = currentUser!.id;
+    
     final updates = {
       'id': userId,
       'username': username,
       'updated_at': DateTime.now().toIso8601String(),
     };
-    if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+
+    if (avatarUrl != null) {
+      updates['avatar_url'] = avatarUrl;
+    }
 
     try {
       await _supabase.from('profiles').upsert(updates);

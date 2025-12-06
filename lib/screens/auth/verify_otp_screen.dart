@@ -26,7 +26,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.verifyOtp(
+      await _authService.verifySignUpOtp(
         email: widget.email,
         token: _otpController.text.trim(),
       );
@@ -63,7 +63,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 40),
-       
+            
             TextFormField(
               controller: _otpController,
               keyboardType: TextInputType.number,

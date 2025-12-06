@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ppb_journey_app/services/auth_service.dart';
-import 'package:ppb_journey_app/screens/auth/verify_otp_screen.dart'; // Import screen baru
+import 'package:ppb_journey_app/screens/auth/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,29 +12,27 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
 
-  Future<void> _handleSendOtp() async {
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      await _authService.sendOtp(_emailController.text.trim());
-      
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VerifyOtpScreen(email: _emailController.text.trim()),
-          ),
-        );
-      }
+      await _authService.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")), 
+            backgroundColor: Colors.red
+          ),
         );
       }
     } finally {
@@ -54,45 +52,75 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.send_to_mobile, size: 80, color: Color(0xFF6E78F7)),
+                const Icon(Icons.flight_takeoff, size: 80, color: Color(0xFF6E78F7)),
                 const SizedBox(height: 20),
                 const Text(
-                  'Selamat Datang!',
+                  'Welcome Back!',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Masuk atau Daftar menggunakan Email.\nKami akan mengirimkan kode OTP.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  'Silakan login untuk melanjutkan', 
+                  textAlign: TextAlign.center, 
+                  style: TextStyle(color: Colors.grey)
                 ),
                 const SizedBox(height: 40),
-
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email Address',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (val) => val != null && val.contains('@') 
-                      ? null : 'Masukkan email yang valid',
+                  validator: (val) => (val != null && val.contains('@')) ? null : 'Email tidak valid',
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  validator: (val) => (val != null && val.length >= 6) ? null : 'Minimal 6 karakter',
                 ),
                 
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _handleSendOtp,
+                  onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6E78F7),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: _isLoading 
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('KIRIM KODE OTP', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      : const Text('LOGIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Belum punya akun? "),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context, 
+                          MaterialPageRoute(builder: (context) => const RegisterScreen())
+                        );
+                      },
+                      child: const Text(
+                        "Daftar Sekarang", 
+                        style: TextStyle(color: Color(0xFF6E78F7), fontWeight: FontWeight.bold)
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
           ),
