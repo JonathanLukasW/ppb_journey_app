@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:ppb_journey_app/services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -10,81 +12,151 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _usernameController = TextEditingController();
-  final _avatarUrlController = TextEditingController();
-  final _supabase = Supabase.instance.client;
+  final AuthService _authService = AuthService();
+  
+  File? _pickedImage;
+  String? _currentAvatarUrl;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _loadProfileData();
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _loadProfileData() async {
     setState(() => _isLoading = true);
-    try {
-      final userId = _supabase.auth.currentUser!.id;
-      final data = await _supabase.from('profiles').select().eq('id', userId).single();
-      
+    final data = await _authService.getProfile();
+    if (data != null) {
       _usernameController.text = data['username'] ?? '';
-      _avatarUrlController.text = data['avatar_url'] ?? '';
-    } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _currentAvatarUrl = data['avatar_url'];
+      });
+    }
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _pickedImage = File(pickedFile.path);
+      });
     }
   }
 
-  Future<void> _updateProfile() async {
+  Future<void> _saveProfile() async {
     setState(() => _isLoading = true);
     try {
-      final userId = _supabase.auth.currentUser!.id;
-      await _supabase.from('profiles').upsert({
-        'id': userId,
-        'username': _usernameController.text,
-        'avatar_url': _avatarUrlController.text,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      String? newAvatarUrl;
+
+      if (_pickedImage != null) {
+        newAvatarUrl = await _authService.uploadAvatar(_pickedImage!);
+      }
+
+      await _authService.updateProfile(
+        username: _usernameController.text,
+        avatarUrl: newAvatarUrl,
+      );
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil diperbarui!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil berhasil diperbarui!')),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ImageProvider? backgroundImage;
+    if (_pickedImage != null) {
+      backgroundImage = FileImage(_pickedImage!);
+    } else if (_currentAvatarUrl != null && _currentAvatarUrl!.isNotEmpty) {
+      backgroundImage = NetworkImage(_currentAvatarUrl!);
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Edit Profile")),
+      appBar: AppBar(
+        title: const Text("Edit Profile", style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator()) 
-        : Padding(
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF6E78F7))) 
+        : SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundImage: _avatarUrlController.text.isNotEmpty 
-                    ? NetworkImage(_avatarUrlController.text) 
-                    : null,
-                  child: _avatarUrlController.text.isEmpty ? const Icon(Icons.person, size: 40) : null,
-                ),
                 const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: backgroundImage,
+                        child: (backgroundImage == null) 
+                            ? const Icon(Icons.person, size: 60, color: Colors.grey) 
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF6E78F7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 10),
+                const Text("klik foto untuk mengganti", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 30),
+
                 TextFormField(
                   controller: _usernameController,
-                  decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: const Icon(Icons.person_outline),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
                 ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _avatarUrlController,
-                  decoration: const InputDecoration(labelText: 'Avatar URL (Link Gambar)', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: _updateProfile,
-                  child: const Text("Simpan Perubahan"),
+                
+                const SizedBox(height: 40),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _saveProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6E78F7),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    child: const Text("Simpan Perubahan", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
                 )
               ],
             ),
