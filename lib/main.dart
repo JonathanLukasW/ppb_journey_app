@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:ppb_journey_app/screens/friends/friends_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ppb_journey_app/screens/auth/login_screen.dart';
 import 'package:ppb_journey_app/screens/events/event_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
@@ -48,12 +49,14 @@ class AuthGuard extends StatelessWidget {
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
-        
+
         final session = snapshot.data?.session;
         if (session != null) {
-          return const MainScreen(); 
+          return const MainScreen();
         }
         return const LoginScreen();
       },
@@ -72,8 +75,8 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final List<Widget> _screens = [
     const EventListScreen(),
-    const Center(child: Text("Halaman Chat")), 
-    const Center(child: Text("Halaman Friends")), 
+    const Center(child: Text("Halaman Chat")),
+    const FriendsScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -85,18 +88,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       body: _screens[_selectedIndex],
-      
+
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black,
-              blurRadius: 20,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black, blurRadius: 20)],
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
@@ -107,7 +104,10 @@ class _MainScreenState extends State<MainScreen> {
           selectedItemColor: const Color(0xFF6E78F7),
           unselectedItemColor: Colors.grey.shade400,
           showUnselectedLabels: true,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.calendar_today_rounded),

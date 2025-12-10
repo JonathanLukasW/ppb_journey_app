@@ -16,52 +16,8 @@ class AuthService {
         password: password,
       );
     } catch (e) {
-      throw Exception('Login gagal: Email atau password salah.');
-    }
-  }
-
-  Future<void> signUp({
-    required String email, 
-    required String password,
-    required String username,
-  }) async {
-    try {
-      await _supabase.auth.signUp(
-        email: email, 
-        password: password,
-      );
-    } catch (e) {
-      throw Exception('Gagal daftar: $e');
-    }
-  }
-
-  Future<void> verifySignUpOtp({required String email, required String token}) async {
-    try {
-      final response = await _supabase.auth.verifyOTP(
-        type: OtpType.signup, 
-        token: token,
-        email: email,
-      );
+      throw Exception('Login gagal: Cek email atau password Anda.');
       
-      if (response.session != null) {
-        await _createProfile(
-          response.user!.id, 
-          response.user!.userMetadata?['username']
-        );
-      }
-    } catch (e) {
-      throw Exception('Kode OTP salah atau kadaluarsa.');
-    }
-  }
-
-  Future<void> _createProfile(String userId, String? username) async {
-    try {
-      await _supabase.from('profiles').upsert({
-        'id': userId,
-        'username': username ?? 'User Baru',
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
     }
   }
 
