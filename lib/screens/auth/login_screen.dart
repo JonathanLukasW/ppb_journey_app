@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ppb_journey_app/services/auth_service.dart';
 import 'package:ppb_journey_app/screens/auth/register_screen.dart';
+import 'package:ppb_journey_app/screens/auth/forgot_password_screen.dart';
+import 'package:ppb_journey_app/screens/auth/verify_otp_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +16,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  
   bool _isLoading = false;
+  bool _isPasswordHidden = true;
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -38,6 +42,22 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _navigateToVerify() {
+    if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Isi kolom email dulu untuk verifikasi")),
+      );
+      return;
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VerifyOtpScreen(email: _emailController.text.trim()),
+      ),
+    );
   }
 
   @override
@@ -79,16 +99,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _isPasswordHidden,
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(_isPasswordHidden ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _isPasswordHidden = !_isPasswordHidden),
+                    ),
                   ),
                   validator: (val) => (val != null && val.length >= 6) ? null : 'Minimal 6 karakter',
                 ),
-                
-                const SizedBox(height: 24),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+                    },
+                    child: const Text("Lupa Password?", style: TextStyle(color: Colors.grey)),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
@@ -101,7 +136,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text('LOGIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
 
-                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: _navigateToVerify,
+                  child: const Text(
+                    "Sudah daftar tapi belum verifikasi? Masukkan Kode",
+                    style: TextStyle(color: Color(0xFF6E78F7), fontSize: 12),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

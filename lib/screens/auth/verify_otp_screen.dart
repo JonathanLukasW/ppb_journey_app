@@ -18,7 +18,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   Future<void> _verify() async {
     if (_otpController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan 6 digit kode OTP')),
+        const SnackBar(content: Text('Masukkan kode OTP dengan benar')),
       );
       return;
     }
@@ -46,6 +46,26 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     }
   }
 
+  Future<void> _resendCode() async {
+    setState(() => _isLoading = true);
+    try {
+      await _authService.resendSignUpOtp(widget.email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Kode baru telah dikirim ke email!")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,22 +83,22 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 40),
-            
+
             TextFormField(
               controller: _otpController,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
-              maxLength: 6,
+              maxLength: 8, 
+              
               decoration: InputDecoration(
                 hintText: "000000",
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                counterText: "", 
+                counterText: "",
               ),
             ),
             
             const SizedBox(height: 30),
-            
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -91,6 +111,15 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                 child: _isLoading 
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text("Verifikasi", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: _isLoading ? null : _resendCode,
+              child: const Text(
+                "Tidak menerima kode? Kirim Ulang",
+                style: TextStyle(color: Colors.grey),
               ),
             ),
           ],

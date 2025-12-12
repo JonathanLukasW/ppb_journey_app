@@ -9,11 +9,9 @@ class FriendsInboxScreen extends StatefulWidget {
   State<FriendsInboxScreen> createState() => _FriendsInboxScreenState();
 }
 
-class _FriendsInboxScreenState extends State<FriendsInboxScreen>
-    with SingleTickerProviderStateMixin {
+class _FriendsInboxScreenState extends State<FriendsInboxScreen> with SingleTickerProviderStateMixin {
   final FriendService _friendService = FriendService();
 
-  // Future untuk dua tab
   late Future<List<Friends>> _incomingFuture;
   late Future<List<Friends>> _sentFuture;
 
@@ -30,63 +28,52 @@ class _FriendsInboxScreenState extends State<FriendsInboxScreen>
     });
   }
 
-  // Handle Accept/Reject (Untuk Tab Masuk)
   Future<void> _handleIncomingAction(String friendshipId, bool isAccept) async {
     try {
       if (isAccept) {
         await _friendService.acceptRequest(friendshipId);
-        if (mounted)
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("Pertemanan diterima!")));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pertemanan diterima!")));
+        }
       } else {
         await _friendService.rejectRequest(friendshipId);
-        if (mounted)
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("Permintaan dihapus.")));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Permintaan dihapus.")));
+        }
       }
-      _refreshData(); // Reload kedua tab
+      _refreshData();
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      }
     }
   }
 
-  // Handle Cancel (Untuk Tab Terkirim)
   Future<void> _handleCancelAction(String friendshipId) async {
     try {
-      await _friendService.cancelRequest(friendshipId);
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Permintaan dibatalkan.")));
+      await _friendService.deleteFriend(friendshipId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Permintaan dibatalkan.")));
+      }
       _refreshData();
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // DefaultTabController membungkus Scaffold untuk mengaktifkan TabBar
     return DefaultTabController(
-      length: 2, // Jumlah Tab
+      length: 2, 
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
           title: const Text(
             "Status Permintaan",
-            style: TextStyle(
-              color: Color(0xFF2C3E50),
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-            ),
+            style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold, fontSize: 22),
           ),
           bottom: const TabBar(
             indicatorColor: Color(0xFF2C3E50),
@@ -99,10 +86,8 @@ class _FriendsInboxScreenState extends State<FriendsInboxScreen>
         ),
         body: TabBarView(
           children: [
-            // TAB 1: Permintaan Masuk
             _buildRequestList(future: _incomingFuture, isIncoming: true),
-
-            // TAB 2: Permintaan Terkirim
+            
             _buildRequestList(future: _sentFuture, isIncoming: false),
           ],
         ),
@@ -110,19 +95,16 @@ class _FriendsInboxScreenState extends State<FriendsInboxScreen>
     );
   }
 
-  // Widget Builder yang Reusable untuk kedua list
-  Widget _buildRequestList({
-    required Future<List<Friends>> future,
-    required bool isIncoming,
-  }) {
+  Widget _buildRequestList({required Future<List<Friends>> future, required bool isIncoming}) {
     return FutureBuilder<List<Friends>>(
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
+        }
 
         final requests = snapshot.data ?? [];
 
@@ -131,16 +113,10 @@ class _FriendsInboxScreenState extends State<FriendsInboxScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isIncoming ? Icons.mark_email_read : Icons.send,
-                  size: 64,
-                  color: Colors.grey[300],
-                ),
+                Icon(isIncoming ? Icons.mark_email_read : Icons.send, size: 64, color: Colors.grey[300]),
                 const SizedBox(height: 16),
                 Text(
-                  isIncoming
-                      ? "Tidak ada permintaan masuk"
-                      : "Tidak ada permintaan terkirim",
+                  isIncoming ? "Tidak ada permintaan masuk" : "Tidak ada permintaan terkirim",
                   style: const TextStyle(color: Colors.grey),
                 ),
               ],
@@ -153,52 +129,37 @@ class _FriendsInboxScreenState extends State<FriendsInboxScreen>
           itemCount: requests.length,
           itemBuilder: (context, index) {
             final req = requests[index];
-
             return Card(
               elevation: 2,
               margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundImage: req.avatar_url != null
-                      ? NetworkImage(req.avatar_url!)
-                      : null,
-                  child: req.avatar_url == null
-                      ? Text(req.username[0].toUpperCase())
-                      : null,
+                  backgroundImage: req.avatar_url != null ? NetworkImage(req.avatar_url!) : null,
+                  child: req.avatar_url == null ? Text(req.username[0].toUpperCase()) : null,
                 ),
-                title: Text(
-                  req.username,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                title: Text(req.username, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(
-                  isIncoming
-                      ? "Ingin berteman dengan Anda"
-                      : "Menunggu konfirmasi...",
+                  isIncoming ? "Ingin berteman dengan Anda" : "Menunggu konfirmasi...",
                   style: const TextStyle(fontSize: 12),
                 ),
+                
                 trailing: isIncoming
                     ? Row(
-                        // Tombol untuk Tab Masuk (Terima/Tolak)
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.close, color: Colors.red),
-                            onPressed: () =>
-                                _handleIncomingAction(req.friendship_id, false),
+                            onPressed: () => _handleIncomingAction(req.friendship_id, false),
                           ),
                           IconButton(
                             icon: const Icon(Icons.check, color: Colors.green),
-                            onPressed: () =>
-                                _handleIncomingAction(req.friendship_id, true),
+                            onPressed: () => _handleIncomingAction(req.friendship_id, true),
                           ),
                         ],
                       )
                     : TextButton(
-                        // Tombol untuk Tab Terkirim (Batalkan)
                         onPressed: () => _handleCancelAction(req.friendship_id),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey,
-                        ),
+                        style: TextButton.styleFrom(foregroundColor: Colors.grey),
                         child: const Text("Batal"),
                       ),
               ),

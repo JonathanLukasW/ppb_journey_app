@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Jangan lupa tambahkan intl di pubspec.yaml
-import 'package:ppb_journey_app/models/conversation.dart'; // Sesuaikan import
+import 'package:intl/intl.dart'; 
+import 'package:ppb_journey_app/models/conversation.dart';
 import 'package:ppb_journey_app/services/chat_service.dart';
-import 'package:ppb_journey_app/screens/chats/chat_screen.dart'; // Sesuaikan lokasi ChatScreen
+import 'package:ppb_journey_app/screens/chats/chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -27,7 +27,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     });
   }
 
-  // Fungsi helper format waktu (misal: "10:30" atau "Kemarin")
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time).inDays;
@@ -85,7 +84,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 onTap: () async {
-                  // Navigasi ke ChatScreen
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -95,7 +93,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                     ),
                   );
-                  // Refresh list saat kembali (siapa tahu ada pesan baru)
                   _loadConversations();
                 },
                 leading: CircleAvatar(
@@ -121,7 +118,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       child: Text(
                         chat.lastMessage,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis, // Potong teks panjang dengan ...
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 14,
@@ -137,7 +134,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       _formatTime(chat.time),
                       style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
-                    // Jika ingin fitur "unread count", bisa ditambahkan di sini nanti
                   ],
                 ),
               );
@@ -145,13 +141,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
           );
         },
       ),
-      // Tombol Floating Action Button untuk memulai chat baru
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
         child: const Icon(Icons.message),
         onPressed: () {
-          // Arahkan ke halaman Cari Teman atau Daftar Teman
-          // Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
         },
       ),
     );

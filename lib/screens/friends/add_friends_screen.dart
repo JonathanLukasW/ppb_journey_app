@@ -16,7 +16,6 @@ class _SearchUserPageState extends State<SearchUserPage> {
   List<FriendSearchResults> _results = [];
   bool _isLoading = false;
 
-  // Logic UI 1: Handle pencarian
   void _onSearch(String query) async {
     setState(() => _isLoading = true);
     try {
@@ -29,12 +28,10 @@ class _SearchUserPageState extends State<SearchUserPage> {
     }
   }
 
-  // Logic UI 2: Handle tombol add
   void _onAddFriend(FriendSearchResults user) async {
     try {
       await _friendService.sendFriendRequest(user.id);
-      
-      // Update tampilan tombol secara instan (Optimistic Update)
+
       setState(() {
         user.status = FriendStatus.sent;
       });
@@ -49,7 +46,6 @@ class _SearchUserPageState extends State<SearchUserPage> {
       appBar: AppBar(title: const Text("Cari Teman")),
       body: Column(
         children: [
-          // Input Search
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -66,7 +62,6 @@ class _SearchUserPageState extends State<SearchUserPage> {
             ),
           ),
 
-          // Hasil Search
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -84,7 +79,6 @@ class _SearchUserPageState extends State<SearchUserPage> {
                               : null,
                         ),
                         title: Text(user.username),
-                        // Tombol dinamis berdasarkan status
                         trailing: _buildActionButton(user),
                       );
                     },
@@ -95,8 +89,6 @@ class _SearchUserPageState extends State<SearchUserPage> {
     );
   }
 
-  // Widget Button Switcher
-  // UI terpisah yang menentukan tombol apa yang muncul
   Widget _buildActionButton(FriendSearchResults user) {
     switch (user.status) {
       case FriendStatus.friend:
@@ -110,13 +102,11 @@ class _SearchUserPageState extends State<SearchUserPage> {
         return const Chip(
           label: Text("Terkirim"), 
           backgroundColor: Colors.grey
-        ); // Bisa tambah tombol 'Cancel' di sini kalau mau
+        ); 
         
       case FriendStatus.received:
         return ElevatedButton(
-          onPressed: () {
-            // Arahkan ke halaman konfirmasi atau terima langsung
-          },
+          onPressed: () {},
           style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
           child: const Text("Terima"),
         );

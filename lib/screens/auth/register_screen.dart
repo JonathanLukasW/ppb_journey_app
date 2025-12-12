@@ -15,7 +15,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  
   bool _isLoading = false;
+  bool _isPasswordHidden = true;
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
@@ -28,6 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
         username: _usernameController.text.trim(),
       );
+      
       if (mounted) {
         Navigator.push(
           context,
@@ -62,34 +65,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _usernameController,
                 decoration: const InputDecoration(
                   labelText: 'Username', 
-                  border: OutlineInputBorder()
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
                 validator: (val) => (val == null || val.isEmpty) ? 'Wajib diisi' : null,
               ),
               const SizedBox(height: 16),
-              
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
                   labelText: 'Email', 
-                  border: OutlineInputBorder()
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
                 validator: (val) => (val != null && val.contains('@')) ? null : 'Email tidak valid',
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: _isPasswordHidden,
+                decoration: InputDecoration(
                   labelText: 'Password', 
-                  border: OutlineInputBorder()
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordHidden ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordHidden = !_isPasswordHidden;
+                      });
+                    },
+                  ),
                 ),
                 validator: (val) => (val != null && val.length >= 6) ? null : 'Min 6 karakter',
               ),
               const SizedBox(height: 24),
-              
-              // Tombol Daftar
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(

@@ -5,7 +5,7 @@ import 'package:ppb_journey_app/services/chat_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String friendId;
-  final String friendName; // Untuk judul AppBar
+  final String friendName;
 
   const ChatScreen({
     super.key,
@@ -25,7 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    _messageController.clear(); // Langsung clear agar responsif
+    _messageController.clear();
     try {
       await _chatService.sendMessage(
         content: text,
@@ -51,7 +51,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          // --- BAGIAN 1: LIST PESAN ---
           Expanded(
             child: StreamBuilder<List<Message>>(
               stream: _chatService.getMessageStream(widget.friendId),
@@ -65,13 +64,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (messages.isEmpty) {
                   return const Center(child: Text("Mulai percakapan!"));
                 }
-
-                // ListView dibalik (reverse: true) agar mulai dari bawah
-                // Kita perlu membalik urutan list messages juga
                 final reversedMessages = messages.reversed.toList();
 
                 return ListView.builder(
-                  reverse: true, // Scroll mulai dari bawah
+                  reverse: true,
                   itemCount: reversedMessages.length,
                   itemBuilder: (context, index) {
                     final msg = reversedMessages[index];
@@ -82,7 +78,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          // --- BAGIAN 2: INPUT FIELD ---
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -114,7 +109,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // Widget Balon Chat
   Widget _buildChatBubble(Message msg) {
     return Align(
       alignment: msg.isMine ? Alignment.centerRight : Alignment.centerLeft,

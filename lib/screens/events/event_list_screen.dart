@@ -16,14 +16,15 @@ class EventListScreen extends StatefulWidget {
 class _EventListScreenState extends State<EventListScreen> {
   final TripService _tripService = TripService();
   final AuthService _authService = AuthService();
-  late Future<List<TripEvent>> _futureTrips;
   
-  String? get _currentUserId => _authService.currentUser?.id;
+  late Future<List<TripEvent>> _futureTrips;
+  String? _myAvatarUrl;
 
   @override
   void initState() {
     super.initState();
     _loadTrips();
+    _loadMyProfile();
   }
 
   void _loadTrips() {
@@ -32,22 +33,12 @@ class _EventListScreenState extends State<EventListScreen> {
     });
   }
 
-  Future<void> _deleteEvent(String tripId) async {
-    bool confirm = await showDialog(
-      context: context, 
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Event?'),
-        content: const Text('Tindakan ini tidak bisa dibatalkan.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
-        ],
-      )
-    ) ?? false;
-
-    if (confirm) {
-      await _tripService.deleteTrip(tripId);
-      _loadTrips(); 
+  Future<void> _loadMyProfile() async {
+    final profile = await _authService.getProfile();
+    if (profile != null && mounted) {
+      setState(() {
+        _myAvatarUrl = profile['avatar_url'];
+      });
     }
   }
 
@@ -55,13 +46,18 @@ class _EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: const Text(
           "Travelers",
-          style: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold, fontSize: 22),
+          style: TextStyle(
+            color: Color(0xFF2C3E50), 
+            fontWeight: FontWeight.bold, 
+            fontSize: 22
+          ),
         ),
         actions: [
           IconButton(
@@ -70,16 +66,23 @@ class _EventListScreenState extends State<EventListScreen> {
               await _authService.signOut();
             },
           ),
+
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: InkWell(
               onTap: () async {
                 await Navigator.push(context, MaterialPageRoute(builder: (ctx) => const ProfileScreen()));
-                setState(() {}); 
+                _loadMyProfile(); 
               },
-              child: const CircleAvatar(
+              child: CircleAvatar(
                 radius: 18,
-                child: Icon(Icons.person), 
+                backgroundColor: Colors.grey[300],
+                backgroundImage: _myAvatarUrl != null 
+                    ? NetworkImage(_myAvatarUrl!) 
+                    : null,
+                child: _myAvatarUrl == null 
+                    ? const Icon(Icons.person, color: Colors.white) 
+                    : null,
               ),
             ),
           )
@@ -92,6 +95,7 @@ class _EventListScreenState extends State<EventListScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF6E78F7)));
           }
+
           if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
           }
@@ -126,7 +130,7 @@ class _EventListScreenState extends State<EventListScreen> {
           context,
           MaterialPageRoute(builder: (context) => const CreateEventScreen()),
         );
-        _loadTrips();
+        _loadTrips(); 
       },
       child: Container(
         decoration: BoxDecoration(
@@ -199,6 +203,7 @@ class _EventListScreenState extends State<EventListScreen> {
                       ),
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -209,45 +214,40 @@ class _EventListScreenState extends State<EventListScreen> {
                     textAlign: TextAlign.center,
                     maxLines: 1, 
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2D3142)),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 14, 
+                      color: Color(0xFF2D3142)
+                    ),
                   ),
+                  
                   const SizedBox(height: 8),
+
                   Text(
                     "${trip.startDate.day}",
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF4C5980), height: 1.0),
+                    style: const TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.w900, 
+                      color: Color(0xFF4C5980), 
+                      height: 1.0
+                    ),
                   ),
+
                   Text(
                     _getMonthName(trip.startDate.month),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 24,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _avatar("https://i.pravatar.cc/150?img=5"),
-                        const SizedBox(width: 4),
-                        _avatar("https://i.pravatar.cc/150?img=9"),
-                      ],
+                    style: const TextStyle(
+                      fontSize: 12, 
+                      fontWeight: FontWeight.w500, 
+                      color: Colors.grey
                     ),
-                  )
+                  ),
+
+                  const SizedBox(height: 8), 
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _avatar(String url) {
-    return Container(
-      width: 24, height: 24,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 1.5),
-        image: DecorationImage(image: NetworkImage(url)),
       ),
     );
   }

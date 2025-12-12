@@ -4,7 +4,7 @@ class Conversation {
   final String? avatarUrl;
   final String lastMessage;
   final DateTime time;
-  final bool isMe; // Apakah saya pengirim pesan terakhir?
+  final bool isMe;
 
   Conversation({
     required this.partnerId,
@@ -16,7 +16,6 @@ class Conversation {
   });
 
   factory Conversation.fromMap(Map<String, dynamic> map, String myId) {
-    // Data profil teman diambil dari relasi (lihat service di bawah)
     final partner = map['partner'] ?? {};
 
     return Conversation(

@@ -4,7 +4,7 @@ class Message {
   final String receiverId;
   final String content;
   final DateTime createdAt;
-  final bool isMine; // Helper untuk UI
+  final bool isMine;
 
   Message({
     required this.id,
@@ -22,7 +22,7 @@ class Message {
       receiverId: map['receiver_id'],
       content: map['content'],
       createdAt: DateTime.parse(map['created_at']).toLocal(),
-      isMine: map['sender_id'] == myUserId, // True jika saya pengirimnya
+      isMine: map['sender_id'] == myUserId,
     );
   }
 }
