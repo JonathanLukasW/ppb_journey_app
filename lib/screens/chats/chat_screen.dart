@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:ppb_journey_app/models/messages.dart';
 import 'package:ppb_journey_app/services/chat_service.dart';
 
@@ -47,7 +46,6 @@ class _ChatScreenState extends State<ChatScreen> {
           widget.friendName,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        
       ),
       body: Column(
         children: [
