@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ppb_journey_app/models/trip_event.dart';
 import 'package:ppb_journey_app/services/trip_service.dart';
+import 'package:intl/intl.dart';
 
 class EditEventScreen extends StatefulWidget {
   final TripEvent trip;
@@ -20,7 +21,10 @@ class _EditEventScreenState extends State<EditEventScreen> {
   late TextEditingController _quotaController;
   
   File? _newSelectedImage;
-  late DateTime _selectedDate;
+  
+  late DateTime _startDate;
+  late DateTime _endDate;
+  
   final TripService _tripService = TripService();
   bool _isLoading = false;
 
@@ -31,7 +35,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
     _destinationController = TextEditingController(text: widget.trip.destination);
     _descriptionController = TextEditingController(text: widget.trip.description);
     _quotaController = TextEditingController(text: widget.trip.maxParticipants.toString());
-    _selectedDate = widget.trip.startDate;
+    _startDate = widget.trip.startDate;
+    _endDate = widget.trip.endDate;
   }
 
   Future<void> _pickImage() async {
@@ -40,10 +45,33 @@ class _EditEventScreenState extends State<EditEventScreen> {
     if (pickedFile != null) setState(() => _newSelectedImage = File(pickedFile.path));
   }
 
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _pickStartDate() async {
     final DateTime? picked = await showDatePicker(
-        context: context, initialDate: _selectedDate, firstDate: DateTime.now(), lastDate: DateTime(2030));
-    if (picked != null) setState(() => _selectedDate = picked);
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked;
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate,
+      firstDate: _startDate,
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() => _endDate = picked);
+    }
   }
 
   Future<void> _updateEvent() async {
@@ -55,7 +83,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
           ownerId: widget.trip.ownerId,
           title: _titleController.text,
           destination: _destinationController.text,
-          startDate: _selectedDate,
+          startDate: _startDate,
+          endDate: _endDate,
           description: _descriptionController.text,
           maxParticipants: int.parse(_quotaController.text),
           imageUrl: widget.trip.imageUrl,
@@ -65,7 +94,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event berhasil diupdate!')));
-          Navigator.pop(context, true); 
+          Navigator.pop(context, true);
         }
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red));
@@ -98,36 +127,45 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 child: Container(
                   width: double.infinity, height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.grey[200], borderRadius: BorderRadius.circular(15),
                     image: imageProvider != null ? DecorationImage(image: imageProvider, fit: BoxFit.cover) : null
                   ),
                   child: imageProvider == null ? const Center(child: Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey)) : null,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Center(child: Text("Ketuk gambar untuk mengubah", style: TextStyle(color: Colors.grey))),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8), const Center(child: Text("Ketuk gambar untuk mengubah", style: TextStyle(color: Colors.grey))), const SizedBox(height: 20),
+              
+              _buildInput(_titleController, 'Judul Event', Icons.title), const SizedBox(height: 16),
+              _buildInput(_destinationController, 'Lokasi', Icons.location_on), const SizedBox(height: 16),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDateSelector(
+                      label: "Tanggal Mulai",
+                      date: _startDate,
+                      onTap: _pickStartDate,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildDateSelector(
+                      label: "Tanggal Selesai",
+                      date: _endDate,
+                      onTap: _pickEndDate,
+                    ),
+                  ),
+                ],
+              ),
 
-              _buildInput(_titleController, 'Judul Event', Icons.title),
               const SizedBox(height: 16),
-              _buildInput(_destinationController, 'Lokasi', Icons.location_on),
-              const SizedBox(height: 16),
-              _buildInput(_quotaController, 'Maksimal Peserta', Icons.people, type: TextInputType.number),
-              const SizedBox(height: 16),
+              _buildInput(_quotaController, 'Maksimal Peserta', Icons.people, type: TextInputType.number), const SizedBox(height: 16),
               TextFormField(
-                controller: _descriptionController,
-                maxLines: 3,
+                controller: _descriptionController, maxLines: 3,
                 decoration: InputDecoration(labelText: 'Deskripsi', prefixIcon: const Icon(Icons.description, color: Colors.teal), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), filled: true, fillColor: Colors.grey[100]),
                 validator: (val) => val!.isEmpty ? 'Wajib diisi' : null,
               ),
-              const SizedBox(height: 20),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today, color: Colors.teal),
-                title: Text('Tanggal: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
-                onTap: () => _selectDate(context),
-              ),
+              
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity, height: 50,
@@ -139,6 +177,37 @@ class _EditEventScreenState extends State<EditEventScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateSelector({required String label, DateTime? date, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 16, color: Colors.teal),
+                const SizedBox(width: 8),
+                Text(
+                  date != null ? DateFormat('dd/MM/yyyy').format(date) : "-",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

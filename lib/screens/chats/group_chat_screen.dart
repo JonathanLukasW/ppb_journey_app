@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ppb_journey_app/services/group_service.dart';
 import 'package:intl/intl.dart';
+import 'package:ppb_journey_app/screens/chats/group_info_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
@@ -45,14 +46,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     _messageController.clear();
-
     try {
       await _groupService.sendGroupMessage(widget.groupId, text);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     }
   }
@@ -63,7 +61,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       appBar: AppBar(
         title: Text(widget.groupName),
         actions: [
-          IconButton(icon: const Icon(Icons.info_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => GroupInfoScreen(
+                  groupId: widget.groupId, 
+                  groupName: widget.groupName
+                )
+              ));
+            },
+          ),
         ],
       ),
       body: Column(
@@ -72,21 +80,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             child: _isLoadingMembers
                 ? const Center(child: CircularProgressIndicator())
                 : StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: _groupService.getGroupMessagesStream(
-                      widget.groupId,
-                    ),
+                    stream: _groupService.getGroupMessagesStream(widget.groupId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-
                       final messages = snapshot.data ?? [];
                       if (messages.isEmpty) {
-                        return const Center(
-                          child: Text("Belum ada obrolan di grup ini."),
-                        );
+                        return const Center(child: Text("Belum ada obrolan di grup ini."));
                       }
-
                       return ListView.builder(
                         reverse: true,
                         itemCount: messages.length,
@@ -94,22 +96,14 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           final msg = messages[index];
                           final senderId = msg['sender_id'] as String;
                           final isMe = senderId == _myUserId;
+                          final senderProfile = _membersMap[senderId] ?? {'username': 'Unknown', 'avatar_url': null};
 
-                          final senderProfile =
-                              _membersMap[senderId] ??
-                              {'username': 'Unknown', 'avatar_url': null};
-
-                          return _buildGroupMessageBubble(
-                            msg,
-                            isMe,
-                            senderProfile,
-                          );
+                          return _buildGroupMessageBubble(msg, isMe, senderProfile);
                         },
                       );
                     },
                   ),
           ),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             color: Colors.white,
@@ -126,10 +120,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     ),
                   ),
                 ),
@@ -160,27 +151,19 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Column(
-        crossAxisAlignment: isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (!isMe)
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 2),
               child: Text(
                 senderProfile['username'],
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[700]),
               ),
             ),
-
+          
           Row(
-            mainAxisAlignment: isMe
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe) ...[
@@ -190,21 +173,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       ? NetworkImage(senderProfile['avatar_url'])
                       : null,
                   child: senderProfile['avatar_url'] == null
-                      ? Text(
-                          senderProfile['username'][0].toUpperCase(),
-                          style: const TextStyle(fontSize: 10),
-                        )
+                      ? Text(senderProfile['username'][0].toUpperCase(), style: const TextStyle(fontSize: 10))
                       : null,
                 ),
                 const SizedBox(width: 8),
               ],
-
+              
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isMe ? Colors.blue : Colors.grey[200],
                     borderRadius: BorderRadius.only(

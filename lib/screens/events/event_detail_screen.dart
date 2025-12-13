@@ -3,6 +3,8 @@ import 'package:ppb_journey_app/models/trip_event.dart';
 import 'package:ppb_journey_app/services/trip_service.dart';
 import 'package:ppb_journey_app/services/auth_service.dart';
 import 'package:ppb_journey_app/screens/events/edit_event_screen.dart';
+import 'package:ppb_journey_app/services/friend_service.dart';
+
 class EventDetailScreen extends StatefulWidget {
   final TripEvent trip;
   final VoidCallback? onRefresh;
@@ -16,10 +18,11 @@ class EventDetailScreen extends StatefulWidget {
 class _EventDetailScreenState extends State<EventDetailScreen> {
   final AuthService _authService = AuthService();
   final TripService _tripService = TripService();
-  
+  final FriendService _friendService = FriendService();
+
   List<Map<String, dynamic>> _participants = [];
   bool _isLoading = true;
-  bool _isJoined = false;
+  String _myStatus = 'none';
 
   @override
   void initState() {
@@ -32,23 +35,43 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final data = await _tripService.getTripParticipants(widget.trip.id);
     final myId = _authService.currentUser?.id;
 
-    setState(() {
-      _participants = data;
-      _isJoined = data.any((p) => p['id'] == myId);
-      _isLoading = false;
-    });
+    String status = 'none';
+    try {
+      final myData = data.firstWhere((p) => p['id'] == myId);
+      status = myData['status'];
+    } catch (e) {
+      status = 'none';
+    }
+
+    if (mounted) {
+      setState(() {
+        _participants = data;
+        _myStatus = status;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _handleJoin() async {
     setState(() => _isLoading = true);
     try {
       await _tripService.joinTrip(widget.trip.id);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Berhasil Join!"), backgroundColor: Colors.green));
-      _loadParticipants();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Berhasil Join!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadParticipants();
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -56,32 +79,117 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     setState(() => _isLoading = true);
     try {
       await _tripService.leaveTrip(widget.trip.id);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Anda keluar dari event."), backgroundColor: Colors.orange));
-      _loadParticipants();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Anda keluar dari event."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        _loadParticipants();
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _deleteEvent() async {
-    bool confirm = await showDialog(
-      context: context, 
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Event?'),
-        content: const Text('Event ini akan dihapus permanen.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+  void _showInviteDialog() async {
+    final friends = await _friendService.getFriendList();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              "Undang Teman",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: friends.length,
+              itemBuilder: (context, index) {
+                final friend = friends[index];
+                final isAlreadyIn = _participants.any(
+                  (p) => p['id'] == friend.id,
+                );
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: friend.avatar_url != null
+                        ? NetworkImage(friend.avatar_url!)
+                        : null,
+                  ),
+                  title: Text(friend.username),
+                  trailing: isAlreadyIn
+                      ? const Text(
+                          "Sudah Join",
+                          style: TextStyle(color: Colors.grey),
+                        )
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.person_add,
+                            color: Colors.blue,
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await _tripService.inviteFriend(
+                              widget.trip.id,
+                              friend.id,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  "Undangan dikirim ke ${friend.username}",
+                                ),
+                              ),
+                            );
+                            _loadParticipants();
+                          },
+                        ),
+                );
+              },
+            ),
+          ),
         ],
-      )
-    ) ?? false;
+      ),
+    );
+  }
+
+  Future<void> _deleteEvent() async {
+    bool confirm =
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Hapus Event?'),
+            content: const Text('Event ini akan dihapus permanen.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ) ??
+        false;
 
     if (confirm) {
       await _tripService.deleteTrip(widget.trip.id);
       if (mounted) {
-        Navigator.pop(context); 
+        Navigator.pop(context);
         if (widget.onRefresh != null) widget.onRefresh!();
       }
     }
@@ -90,7 +198,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isOwner = _authService.currentUser?.id == widget.trip.ownerId;
-    final bool isFull = _participants.length >= widget.trip.maxParticipants;
+    final bool isFull =
+        _participants.where((p) => p['status'] == 'joined').length >=
+        widget.trip.maxParticipants;
 
     return Scaffold(
       body: CustomScrollView(
@@ -99,22 +209,37 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             expandedHeight: 250.0,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(widget.trip.destination, 
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 10)])
+              title: Text(
+                widget.trip.destination,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 10)],
+                ),
               ),
-              background: widget.trip.imageUrl != null 
-                ? Image.network(widget.trip.imageUrl!, fit: BoxFit.cover)
-                : Container(color: Colors.teal),
+              background: widget.trip.imageUrl != null
+                  ? Image.network(widget.trip.imageUrl!, fit: BoxFit.cover)
+                  : Container(color: Colors.teal),
             ),
             actions: [
-              if (isOwner)
+              if (isOwner) ...[
                 IconButton(
-                  icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.delete, color: Colors.red)),
+                  icon: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person_add, color: Colors.blue),
+                  ),
+                  onPressed: _showInviteDialog,
+                ),
+                IconButton(
+                  icon: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.delete, color: Colors.red),
+                  ),
                   onPressed: _deleteEvent,
-                )
+                ),
+              ],
             ],
           ),
-
           SliverList(
             delegate: SliverChildListDelegate([
               Padding(
@@ -122,58 +247,111 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.trip.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text(
+                      widget.trip.title,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 8),
-                        Text("Tanggal: ${widget.trip.startDate.day}-${widget.trip.startDate.month}-${widget.trip.startDate.year}"),
+                        Text(
+                          "${widget.trip.startDate.day} ${_getMonthName(widget.trip.startDate.month)} - ${widget.trip.endDate.day} ${_getMonthName(widget.trip.endDate.month)} ${widget.trip.endDate.year}",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: isFull ? Colors.red[100] : Colors.green[100],
-                            borderRadius: BorderRadius.circular(10)
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            "${_participants.length} / ${widget.trip.maxParticipants} Peserta",
-                            style: TextStyle(color: isFull ? Colors.red : Colors.green, fontWeight: FontWeight.bold),
+                            "${_participants.where((p) => p['status'] == 'joined').length} / ${widget.trip.maxParticipants} Peserta",
+                            style: TextStyle(
+                              color: isFull ? Colors.red : Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     const Divider(),
-                    
-                    const Text("Deskripsi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Deskripsi",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.trip.description.isNotEmpty ? widget.trip.description : "Tidak ada deskripsi.",
+                      widget.trip.description.isNotEmpty
+                          ? widget.trip.description
+                          : "Tidak ada deskripsi.",
                       style: const TextStyle(color: Colors.grey, height: 1.5),
                     ),
-
                     const SizedBox(height: 30),
 
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
-                      title: const Text("Daftar Peserta", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      title: const Text(
+                        "Daftar Peserta",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       initiallyExpanded: true,
                       children: [
-                        if (_participants.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text("Belum ada peserta.", style: TextStyle(color: Colors.grey))),
-                        ..._participants.map((user) => ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: user['avatar_url'] != null ? NetworkImage(user['avatar_url']) : null,
-                            child: user['avatar_url'] == null ? const Icon(Icons.person) : null,
+                        if (_participants.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Text(
+                              "Belum ada peserta.",
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ),
-                          title: Text(user['username']),
-                          trailing: user['id'] == widget.trip.ownerId ? const Chip(label: Text("Owner")) : null,
-                        )),
+                        ..._participants.map(
+                          (user) => ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: user['avatar_url'] != null
+                                  ? NetworkImage(user['avatar_url'])
+                                  : null,
+                              child: user['avatar_url'] == null
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            title: Text(user['username']),
+                            subtitle: user['status'] == 'invited'
+                                ? const Text(
+                                    "Diundang",
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontSize: 10,
+                                    ),
+                                  )
+                                : null,
+                            trailing: user['id'] == widget.trip.ownerId
+                                ? const Chip(label: Text("Owner"))
+                                : null,
+                          ),
+                        ),
                       ],
                     ),
-
                     const SizedBox(height: 40),
-
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -198,31 +376,49 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => EditEventScreen(trip: widget.trip)),
+            MaterialPageRoute(
+              builder: (context) => EditEventScreen(trip: widget.trip),
+            ),
           );
-
           if (result == true) {
             _loadParticipants();
             if (widget.onRefresh != null) widget.onRefresh!();
             Navigator.pop(context);
           }
-        }, 
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange), 
-        child: const Text("Edit Event", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        },
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+        child: const Text(
+          "Edit Event",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       );
     }
 
-    if (_isJoined) {
+    if (_myStatus == 'joined') {
       return ElevatedButton(
         onPressed: _handleLeave,
         style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-        child: const Text("Batal Join (Leave)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: const Text(
+          "Batal Join (Leave)",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    if (_myStatus == 'invited') {
+      return ElevatedButton(
+        onPressed: _handleJoin,
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+        child: const Text(
+          "Terima Undangan (Join)",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       );
     }
 
     if (isFull) {
       return ElevatedButton(
-        onPressed: null, 
+        onPressed: null,
         style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[300]),
         child: const Text("Kuota Penuh", style: TextStyle(color: Colors.grey)),
       );
@@ -231,7 +427,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     return ElevatedButton(
       onPressed: _handleJoin,
       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6E78F7)),
-      child: const Text("Join Event Ini", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: const Text(
+        "Join Event Ini",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
     );
+  }
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
   }
 }

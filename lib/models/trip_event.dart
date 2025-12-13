@@ -3,17 +3,18 @@ class TripEvent {
   final String title;
   final String destination;
   final DateTime startDate;
+  final DateTime endDate;
   final String ownerId;
   final String? imageUrl;
-
-  final String description; 
-  final int maxParticipants; 
+  final String description;
+  final int maxParticipants;
 
   TripEvent({
     required this.id,
     required this.title,
     required this.destination,
     required this.startDate,
+    required this.endDate,
     required this.ownerId,
     this.imageUrl,
     this.description = '',
@@ -26,6 +27,9 @@ class TripEvent {
       title: data['title'] as String,
       destination: data['destination'] as String,
       startDate: DateTime.parse(data['start_date'] as String),
+      endDate: data['end_date'] != null 
+          ? DateTime.parse(data['end_date'] as String) 
+          : DateTime.parse(data['start_date'] as String),
       ownerId: data['owner_id'] as String,
       imageUrl: data['cover_image_url'] as String?,
       description: data['description'] ?? '',
@@ -38,6 +42,7 @@ class TripEvent {
       'title': title,
       'destination': destination,
       'start_date': startDate.toIso8601String().split('T').first,
+      'end_date': endDate.toIso8601String().split('T').first,
       'owner_id': ownerId,
       'cover_image_url': imageUrl,
       'description': description,

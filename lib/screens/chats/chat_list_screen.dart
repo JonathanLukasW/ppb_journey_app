@@ -33,21 +33,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
     });
   }
 
-  // --- LOGIKA PENGGABUNGAN DATA (CORE LOGIC) ---
   Future<List<ChatPreview>> _loadAllChats() async {
-    // 1. Ambil data Chat Pribadi & Grup secara paralel
     final results = await Future.wait([
       _chatService.getConversations(),
       _groupService.getMyGroups(),
     ]);
 
     final personalChats =
-        results[0] as List<dynamic>; // Tipe aslinya List<Conversation>
+        results[0] as List<dynamic>;
     final groupChats = results[1] as List<Map<String, dynamic>>;
 
     List<ChatPreview> combinedList = [];
 
-    // 2. Konversi Chat PRIBADI ke ChatPreview
     for (var chat in personalChats) {
       combinedList.add(
         ChatPreview(
@@ -61,10 +58,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       );
     }
 
-    // 3. Konversi Chat GRUP ke ChatPreview
     for (var group in groupChats) {
-      // Catatan: Saat ini 'getMyGroups' mungkin belum punya data last_message
-      // Kita pakai created_at grup sebagai placeholder waktu jika belum ada pesan
       final DateTime groupTime = DateTime.parse(group['created_at']).toLocal();
 
       combinedList.add(
@@ -72,20 +66,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
           id: group['id'],
           title: group['name'],
           avatarUrl: group['avatar_url'],
-          lastMessage: "Grup: ${group['name']}", // Bisa diupdate nanti
+          lastMessage: "Grup: ${group['name']}",
           time: groupTime,
           isGroup: true,
         ),
       );
     }
-
-    // 4. SORTING: Urutkan berdasarkan waktu (Terbaru di atas)
     combinedList.sort((a, b) => b.time.compareTo(a.time));
 
     return combinedList;
   }
 
-  // Helper Format Waktu
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time).inDays;
@@ -143,8 +134,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   horizontal: 16,
                   vertical: 8,
                 ),
-
-                // AVATAR: Beda icon untuk grup dan personal
                 leading: CircleAvatar(
                   radius: 28,
                   backgroundColor: chat.isGroup
@@ -168,7 +157,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                 subtitle: Row(
                   children: [
-                    // Icon kecil untuk menandai grup
                     if (chat.isGroup) ...[
                       const Icon(
                         Icons.people_alt,
@@ -194,9 +182,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
 
                 onTap: () async {
-                  // LOGIKA NAVIGASI: Cek isGroup
                   if (chat.isGroup) {
-                    // Masuk ke Halaman Grup
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -207,7 +193,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                     );
                   } else {
-                    // Masuk ke Halaman Pribadi
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -218,7 +203,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                     );
                   }
-                  _refreshData(); // Refresh saat kembali
+                  _refreshData();
                 },
               );
             },
